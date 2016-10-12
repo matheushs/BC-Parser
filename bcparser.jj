@@ -11,19 +11,10 @@ public class BCParser {
         StringReader programa = new StringReader(args[0]);
         BCParser parser = new BCParser(programa);
 
-        /*
         try {
-            //parser = new BCParser(new java.io.FileInputStream(programa));
-        } catch (java.io.FileNotFoundException e) {
-            System.out.println("Arquivo " + nomeArquivo + " não foi encontrado");
-            return;
-        }
-        */
-
-        try {
-            parser.lexicalAnalizer();
-            System.out.println("Programa analisado com sucesso.");
-            //parser.bc();
+            //parser.lexicalAnalizer();
+            parser.bc();
+            System.out.println("Programa analisado com sucesso");
         } catch (ParseException e) {
             System.out.println(e.getMessage());
         }
@@ -61,6 +52,7 @@ TOKEN:
 |   <DOT: ".">
 |   <BACKSLASH: "\\">
 |   <QUOTE: "\"">
+|   <LINEBREAK: "\n">
 }
 
 TOKEN:
@@ -89,7 +81,6 @@ TOKEN:
 |   <SQRT: "sqrt">
 |   <LENGTH: "length">
 |   <SCALE: "scale">
-
 }
 
 TOKEN:
@@ -117,7 +108,6 @@ TOKEN:
 |   <MULASSIGN: "*=">
 |   <MODASSIGN: "%=">
 |   <POWASSIGN: "^=">
-|   <SEPARATOR: "\n" | "<SEMICOLON>">
 }
 
 TOKEN:
@@ -130,31 +120,36 @@ TOKEN:
 |   <#SYMBOLS: " " | <NOT> | "%" | "&" | "'" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | <LESSER> | <ASSIGN> | <GREATER>  | "[" | "]" | "^" | "{" | "|" | "}">
 |   <NUMBERS: <INTEGER> | <FLOAT>>
 |   <ID: <LETTERS> (<LETTERSNUMBERS>)*>
-|   <STRING: <QUOTE>(<LETTERSNUMBERS> | <SYMBOLS> | <SEPARATOR>)*<QUOTE>>
+|   <STRING: <QUOTE>(<LETTERSNUMBERS> | <SYMBOLS> | <SEMICOLON> | <LINEBREAK>)*<QUOTE>>
 }
 
 void bc():
 { }
 {
-  (COMMAND() | DEFINEFUNCTION())+ <EOF>
+  (COMMAND() | DEFINEFUNCTION())+ <EOF> {System.out.println("Found BC");}
+}
 
+void SEP():
+{ }
+{
+    (<SEMICOLON> | <LINEBREAK>)+
 }
 
 void COMMAND():
 { }
 {
-    E()
-|   COMPOST_COMMAND()
-|   COMMAND_IF()
-|   COMMAND_WHILE()
-|   COMMAND_FOR()
-|   COMMAND_NULL()
-|   COMMAND_BREAK()
-|   COMMAND_CONTINUE()
-|   COMMAND_QUIT()
-|   COMMAND_PRINT()
-|   COMMAND_STRING()
-|   COMMAND_RETURN()
+    E() {System.out.println("Found E()");}
+|   COMPOST_COMMAND() {System.out.println("Found COMPOST_COMMAND");}
+|   COMMAND_IF() {System.out.println("Found COMMAND_IF");}
+|   COMMAND_WHILE() {System.out.println("Found COMMAND_WHILE");}
+|   COMMAND_FOR() {System.out.println("Found COMMAND_FOR");}
+|   COMMAND_NULL() {System.out.println("Found COMMAND_NULL");}
+|   COMMAND_BREAK() {System.out.println("Found COMMAND_BREAK");}
+|   COMMAND_CONTINUE() {System.out.println("Found COMMAND_CONTINUE");}
+|   COMMAND_QUIT() {System.out.println("Found COMMAND_QUIT");}
+|   COMMAND_PRINT() {System.out.println("Found COMMAND_PRINT");}
+|   COMMAND_STRING() {System.out.println("Found COMMAND_STRING");}
+|   COMMAND_RETURN() {System.out.println("Found COMMAND_RETURN");}
 }
 
 void COMPOST_COMMAND():
@@ -184,7 +179,7 @@ void COMMAND_FOR():
 void COMMAND_NULL():
 { }
 {
-    <SEPARATOR>
+    SEP()
 }
 
 void COMMAND_BREAK():
@@ -226,7 +221,7 @@ void COMMAND_RETURN():
 void COMMANDLIST():
 { }
 {
-    COMMAND() (<SEPARATOR> COMMAND())*
+    COMMAND() (SEP() COMMAND())*
 }
 
 void EXPRESSIONLIST():
@@ -238,83 +233,86 @@ void EXPRESSIONLIST():
 void E():
 { }
 {
-    E1() (<OR> E1())*
+    E1() (<OR> E1())* {System.out.println("Found E1");}
 }
 
 void E1():
 { }
 {
-    E2() (<AND> E2())*
+    E2() (<AND> E2())* {System.out.println("Found E2");}
 }
 
 void E2():
 { }
 {
-    (<NOT>)? E3()
+    (<NOT>)? E3() {System.out.println("Found E3");}
 }
 
 void E3():
 { }
 {
-    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>) E4())?
+    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>) E4())?  {System.out.println("Found E4");}
 }
 
 void E4():
 { }
 {
-    (<ID> (<LBRACK> E() <RBRACK>)? (<PLUSPLUS> | <MINUSMINUS>)? (<ASSIGN>
-                                                            |    <PLUSASSIGN>
-                                                            |    <MINUSASSIGN>
-                                                            |    <MULASSIGN>
-                                                            |    <DIVASSIGN>
-                                                            |    <MODASSIGN>
-                                                            |    <POWASSIGN>) E4())
-|   E5()
+    (
+        <ID> (<LBRACK> E() <RBRACK>)? ((<PLUSPLUS> | <MINUSMINUS>) |
+                                                             ((<ASSIGN>
+                                                            |  <PLUSASSIGN>
+                                                            |  <MINUSASSIGN>
+                                                            |  <MULASSIGN>
+                                                            |  <DIVASSIGN>
+                                                            |  <MODASSIGN>
+                                                            |  <POWASSIGN>) E4()))
+    )
+|   E5()  {System.out.println("Found E5");}
 }
 
 void E5():
 { }
 {
-    E6() ((<PLUS> | <MINUS>) E6())*
+    E6() (LOOKAHEAD(2)(<PLUS> | <MINUS>) E6())*  {System.out.println("Found E6");}
 }
 
 void E6():
 { }
 {
-    E7() ((<MUL> | <DIV> | <MOD>) E7())*
+    E7() ((<MUL> | <DIV> | <MOD>) E7())*  {System.out.println("Found E7");}
 }
 
 void E7():
 { }
 {
-    E8() (<POWER> E7())?
+    E8() (<POWER> E7())?  {System.out.println("Found E8");}
 }
 
 void E8():
 { }
 {
-    (<MINUS>)? E9()
+    (<MINUS>)? E9()  {System.out.println("Found E9");}
 }
 
 void E9():
 { }
 {
-    ((<PLUSPLUS> | <MINUSMINUS>) <ID> (<LBRACK> E() <RBRACK>)?) | E10()
+    ((<PLUSPLUS> | <MINUSMINUS>) <ID> (<LBRACK> E() <RBRACK>)?) | E10()  {System.out.println("Found E10");}
 }
 
 void E10():
 { }
 {
-    <NUMBERS>
-|   (<LRBRACK>) E() (<RRBRACK>)
-|   (<SQRT> (<LRBRACK>) E() (<RRBRACK>))
-|   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>))
-|   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?)
-|   LOOKAHEAD(2) CALLFUNCTION()
-|   (<ID> ( <LBRACK> E() <RBRACK>)?)
-|   <IBASE>
-|   <OBASE>
-|   <LAST>
+    <NUMBERS> {System.out.println("Found NUMBER");}
+|   (<LRBRACK>) E() (<RRBRACK>) {System.out.println("Found (E)");}
+|   (<SQRT> (<LRBRACK>) E() (<RRBRACK>)) {System.out.println("Found Sqrt");}
+|   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>)) {System.out.println("Found Length");}
+|   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?) {System.out.println("Found Scale");}
+|   LOOKAHEAD(2) CALLFUNCTION() {System.out.println("Found CALLFUNCTION");}
+|   (<ID> (<LBRACK> E() <RBRACK>)?)  {System.out.println("Found ID");}
+|   <IBASE> {System.out.println("Found IBASE");}
+|   <OBASE> {System.out.println("Found OBASE");}
+|   <LAST> {System.out.println("Found LAST");}
 |   (<FUNCS> (<LRBRACK>) E() (<RRBRACK>))
 |   (<FUNCC> (<LRBRACK>) E() (<RRBRACK>))
 |   (<FUNCE> (<LRBRACK>) E() (<RRBRACK>))
@@ -345,11 +343,12 @@ void VARLIST():
 
 JAVACODE void lexicalAnalizer()
 {
-  try {
-    Token t = getNextToken();
-    while(t.kind != 0) {
-      System.out.println("\t (" + t.beginLine + ", " + t.beginColumn + "): " + t.image + " - " + tokenImage[t.kind]);
-      t = getNextToken();
+    try {
+        Token t = getNextToken();
+
+        while(t.kind != 0) {
+            System.out.println("\t (" + t.beginLine + ", " + t.beginColumn + "): " + t.image + " - " + tokenImage[t.kind]);
+        t = getNextToken();
     }
   } catch (TokenMgrError error) {
     System.out.println(error.getMessage());
