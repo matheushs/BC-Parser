@@ -1,0 +1,355 @@
+options {
+
+}
+
+PARSER_BEGIN(Trabalho01A)
+
+import java.io.*;
+
+public class Trabalho01A {
+    public static void main (String args[]) {
+        String nomeArquivo = args[0];
+        Trabalho01A trabalho;
+
+        try {
+            trabalho = new Trabalho01A(new java.io.FileInputStream(nomeArquivo));
+        } catch (java.io.FileNotFoundException e) {
+            System.out.println("Arquivo " + nomeArquivo + " não foi encontrado");
+            return;
+        }
+
+        try {
+            trabalho.parse();
+            System.out.println("Programa analisado com sucesso.");
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+PARSER_END(Trabalho01A)
+
+TOKEN:
+{
+    < OTHER : ~[] >
+}
+
+SKIP:
+{
+    " "
+|   "\t"
+|   "\n"
+|   "\r"
+|   < "#" (~["\r", "\n"])* >
+|   < "/*" > : ML_COMMENT_STATE
+}
+
+<ML_COMMENT_STATE> SKIP:
+{
+    < "*/" > : DEFAULT
+|   < ~[] >
+}
+
+TOKEN:
+{
+    <SEMICOLON: ";">
+|   <LRBRACK: "(">
+|   <RRBRACK: ")">
+|   <LBRACK: "[">
+|   <RBRACK: "]">
+|   <LCBRACK: "{">
+|   <RCBRACK: "}">
+|   <ASSIGN: "=">
+|   <COMMA: ",">
+|   <DOT: ".">
+|   <BACKSLASH: "\\">
+|   <QUOTE: "\"">
+}
+
+TOKEN:
+{
+    <IBASE: "ibase">
+|   <OBASE: "obase">
+|   <LAST: "last" | <DOT>>
+|   <IF: "if">
+|   <ELSE: "else">
+|   <WHILE: "while">
+|   <FOR: "for">
+|   <NULL: "null">
+|   <BREAK: "break">
+|   <CONTINUE: "continue">
+|   <QUIT: "quit">
+|   <PRINT: "print">
+|   <RETURN: "return">
+|   <DEFINE: "define">
+|   <AUTO: "auto">
+|   <FUNCS: "s">
+|   <FUNCC: "c">
+|   <FUNCE: "e">
+|   <FUNCL: "l">
+|   <FUNCA: "a">
+|   <FUNCJ: "j">
+|   <SQRT: "sqrt">
+|   <LENGTH: "length">
+|   <SCALE: "scale">
+
+}
+
+TOKEN:
+{
+    <PLUS: "+">
+|   <MINUS: "-">
+|   <DIV: "/">
+|   <MUL: "*">
+|   <MOD: "%">
+|   <PLUSPLUS: "++">
+|   <MINUSMINUS: "--">
+|   <POWER: "^">
+|   <AND: "&&">
+|   <OR: "||">
+|   <NOT: "!">
+|   <GREATER: ">">
+|   <LESSER: "<">
+|   <EQUAL: "==">
+|   <GREATEREQ: ">=">
+|   <LESSEREQ: "<=">
+|   <NOTEQ: "!=">
+|   <PLUSASSIGN: "+=">
+|   <MINUSASSIGN: "-=">
+|   <DIVASSIGN: "/=">
+|   <MULASSIGN: "*=">
+|   <MODASSIGN: "%=">
+|   <POWASSIGN: "^=">
+|   <SEPARATOR: "\\n" | "<SEMICOLON>">
+}
+
+TOKEN:
+{
+    <#DIGITS: ["0"-"9"]>
+|   <#LETTERS: ["a"-"z"]  | "_">
+|   <#FLOAT: ("-" | "+")? (<DIGITS>)+ "." (<DIGITS>)+>
+|   <#INTEGER: ("-" | "+")? (<DIGITS>)+>
+|   <#LETTERSNUMBERS: <DIGITS> | <LETTERS>>
+|   <#SYMBOLS: " " | <NOT> | "%" | "&" | "'" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | <LESSER> | <ASSIGN> | <GREATER>  | "[" | "]" | "^" | "{" | "|" | "}">
+|   <NUMBERS: <INTEGER> | <FLOAT>>
+|   <ID: <LETTERS> (<LETTERSNUMBERS>)*>
+|   <STRING: <QUOTE>(<LETTERSNUMBERS> | <SYMBOLS> | <SEPARATOR>)*<QUOTE>>
+}
+
+void parse():
+{ }
+{
+   bc() <EOF>
+}
+
+void bc():
+{ }
+{
+  ( COMMAND() | DEFINEFUNCTION())+
+
+}
+
+void COMMAND():
+{ }
+{
+    E()
+|   COMPOST_COMMAND()
+|   COMMAND_IF()
+|   COMMAND_WHILE()
+|   COMMAND_FOR()
+|   COMMAND_NULL()
+|   COMMAND_BREAK()
+|   COMMAND_CONTINUE()
+|   COMMAND_QUIT()
+|   COMMAND_PRINT()
+|   COMMAND_STRING()
+|   COMMAND_RETURN()
+}
+
+void COMPOST_COMMAND():
+{ }
+{
+    <LCBRACK> COMMANDLIST() <RCBRACK>
+}
+
+void COMMAND_IF():
+{ }
+{
+    <IF> <LRBRACK> E() <RRBRACK> COMMAND() (<ELSE> COMMAND())?
+}
+
+void COMMAND_WHILE():
+{ }
+{
+    <WHILE> <LRBRACK> E() <RRBRACK> COMMAND()
+}
+
+void COMMAND_FOR():
+{ }
+{
+    <FOR> <LRBRACK> (E())? <SEMICOLON> (E())? <SEMICOLON> (E())? <LRBRACK> COMMAND()
+}
+
+void COMMAND_NULL():
+{ }
+{
+    <SEPARATOR>
+}
+
+void COMMAND_BREAK():
+{ }
+{
+    <BREAK>
+}
+
+void COMMAND_CONTINUE():
+{ }
+{
+    <CONTINUE>
+}
+
+void COMMAND_QUIT():
+{ }
+{
+    <QUIT>
+}
+
+void COMMAND_PRINT():
+{ }
+{
+    <PRINT> EXPRESSIONLIST()
+}
+
+void COMMAND_STRING():
+{ }
+{
+    <STRING>
+}
+
+void COMMAND_RETURN():
+{ }
+{
+    <RETURN> (<LRBRACK> (E())? <RRBRACK> | (E())?)
+}
+
+void COMMANDLIST():
+{ }
+{
+    COMMAND() (<SEPARATOR> COMMAND())*
+}
+
+void EXPRESSIONLIST():
+{ }
+{
+    E() (<COMMA> E())*
+}
+
+void E():
+{ }
+{
+    E1() (<OR> E1())*
+}
+
+void E1():
+{ }
+{
+    E2() (<AND> E2())*
+}
+
+void E2():
+{ }
+{
+    (<NOT>)? E3()
+}
+
+void E3():
+{ }
+{
+    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>) E4())?
+}
+
+void E4():
+{ }
+{
+    (<ID> (<LBRACK>E()<RBRACK>)? (<ASSIGN>
+                                | <PLUSASSIGN>
+                                | <MINUSASSIGN>
+                                | <MULASSIGN>
+                                | <DIVASSIGN>
+                                | <MODASSIGN>
+                                | <POWASSIGN>) E4())
+|   (<ID> (<LBRACK>E()<RBRACK>)? (<PLUSPLUS> | <MINUSMINUS>))
+|   E5()
+}
+
+void E5():
+{ }
+{
+    E6() ((<PLUS> | <MINUS>) E6())*
+}
+
+void E6():
+{ }
+{
+    E7() ((<MUL> | <DIV> | <MOD>) E7())*
+}
+
+void E7():
+{ }
+{
+    E8() (<POWER> E7())?
+}
+
+void E8():
+{ }
+{
+    (<MINUS>)? E9()
+}
+
+void E9():
+{ }
+{
+    ((<PLUSPLUS> | <MINUSMINUS>) <ID> (<LBRACK> E() <RBRACK>)?) | E10()
+}
+
+void E10():
+{ }
+{
+    <NUMBERS>
+|   ((<LRBRACK>) E() (<RRBRACK>))
+|   (<SQRT> (<LRBRACK>) E() (<RRBRACK>))
+|   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>))
+|   (<SCALE> (<LRBRACK>) E() (<RRBRACK>))
+|   CALLFUNCTION()
+|   (<ID> (<LBRACK>E()<RBRACK>)?)
+|   <IBASE>
+|   <OBASE>
+|   <SCALE>
+|   <LAST>
+|   (<FUNCS> (<LRBRACK>) E() (<RRBRACK>))
+|   (<FUNCC> (<LRBRACK>) E() (<RRBRACK>))
+|   (<FUNCE> (<LRBRACK>) E() (<RRBRACK>))
+|   (<FUNCL> (<LRBRACK>) E() (<RRBRACK>))
+|   (<FUNCA> (<LRBRACK>) E() (<RRBRACK>))
+|   (<FUNCJ> (<LRBRACK>) E() (<RRBRACK>) <COMMA> (<LRBRACK>) E() (<RRBRACK>))
+}
+
+void CALLFUNCTION():
+{ }
+{
+    <ID> <LRBRACK> (EXPRESSIONLIST())? <RRBRACK>
+}
+
+void DEFINEFUNCTION():
+{ }
+{
+    <DEFINE> <ID> <LRBRACK> (VARLIST())? <RRBRACK> <LCBRACK>
+    (<AUTO> VARLIST())?
+    COMMANDLIST() <RCBRACK>
+}
+
+void VARLIST():
+{ }
+{
+    <ID> ((<LBRACK>) (<RBRACK>))? (<COMMA> <ID> ((<LBRACK>) (<RBRACK>))?)*
+}
