@@ -2,43 +2,40 @@ options {
 
 }
 
-PARSER_BEGIN(Trabalho01A)
+PARSER_BEGIN(BCParser)
 
 import java.io.*;
 
-public class Trabalho01A {
+public class BCParser {
     public static void main (String args[]) {
-        String nomeArquivo = args[0];
-        Trabalho01A trabalho;
+        StringReader programa = new StringReader(args[0]);
+        BCParser parser = new BCParser(programa);
 
+        /*
         try {
-            trabalho = new Trabalho01A(new java.io.FileInputStream(nomeArquivo));
+            //parser = new BCParser(new java.io.FileInputStream(programa));
         } catch (java.io.FileNotFoundException e) {
             System.out.println("Arquivo " + nomeArquivo + " não foi encontrado");
             return;
         }
+        */
 
         try {
-            trabalho.parse();
+            parser.lexicalAnalizer();
             System.out.println("Programa analisado com sucesso.");
+            //parser.bc();
         } catch (ParseException e) {
             System.out.println(e.getMessage());
         }
     }
 }
 
-PARSER_END(Trabalho01A)
-
-TOKEN:
-{
-    < OTHER : ~[] >
-}
+PARSER_END(BCParser)
 
 SKIP:
 {
     " "
 |   "\t"
-|   "\n"
 |   "\r"
 |   < "#" (~["\r", "\n"])* >
 |   < "/*" > : ML_COMMENT_STATE
@@ -120,7 +117,7 @@ TOKEN:
 |   <MULASSIGN: "*=">
 |   <MODASSIGN: "%=">
 |   <POWASSIGN: "^=">
-|   <SEPARATOR: "\\n" | "<SEMICOLON>">
+|   <SEPARATOR: "\n" | "<SEMICOLON>">
 }
 
 TOKEN:
@@ -136,16 +133,10 @@ TOKEN:
 |   <STRING: <QUOTE>(<LETTERSNUMBERS> | <SYMBOLS> | <SEPARATOR>)*<QUOTE>>
 }
 
-void parse():
-{ }
-{
-   bc() <EOF>
-}
-
 void bc():
 { }
 {
-  ( COMMAND() | DEFINEFUNCTION())+
+  (COMMAND() | DEFINEFUNCTION())+ <EOF>
 
 }
 
@@ -175,7 +166,7 @@ void COMPOST_COMMAND():
 void COMMAND_IF():
 { }
 {
-    <IF> <LRBRACK> E() <RRBRACK> COMMAND() (<ELSE> COMMAND())?
+    <IF> <LRBRACK> E() <RRBRACK> COMMAND() (LOOKAHEAD(2) <ELSE> COMMAND())?
 }
 
 void COMMAND_WHILE():
@@ -187,7 +178,7 @@ void COMMAND_WHILE():
 void COMMAND_FOR():
 { }
 {
-    <FOR> <LRBRACK> (E())? <SEMICOLON> (E())? <SEMICOLON> (E())? <LRBRACK> COMMAND()
+    <FOR> <LRBRACK> (E())? <SEMICOLON> (E())? <SEMICOLON> (E())? <RRBRACK> COMMAND()
 }
 
 void COMMAND_NULL():
@@ -271,14 +262,13 @@ void E3():
 void E4():
 { }
 {
-    (<ID> (<LBRACK>E()<RBRACK>)? (<ASSIGN>
-                                | <PLUSASSIGN>
-                                | <MINUSASSIGN>
-                                | <MULASSIGN>
-                                | <DIVASSIGN>
-                                | <MODASSIGN>
-                                | <POWASSIGN>) E4())
-|   (<ID> (<LBRACK>E()<RBRACK>)? (<PLUSPLUS> | <MINUSMINUS>))
+    (<ID> (<LBRACK> E() <RBRACK>)? (<PLUSPLUS> | <MINUSMINUS>)? (<ASSIGN>
+                                                            |    <PLUSASSIGN>
+                                                            |    <MINUSASSIGN>
+                                                            |    <MULASSIGN>
+                                                            |    <DIVASSIGN>
+                                                            |    <MODASSIGN>
+                                                            |    <POWASSIGN>) E4())
 |   E5()
 }
 
@@ -316,15 +306,14 @@ void E10():
 { }
 {
     <NUMBERS>
-|   ((<LRBRACK>) E() (<RRBRACK>))
+|   (<LRBRACK>) E() (<RRBRACK>)
 |   (<SQRT> (<LRBRACK>) E() (<RRBRACK>))
 |   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>))
-|   (<SCALE> (<LRBRACK>) E() (<RRBRACK>))
-|   CALLFUNCTION()
-|   (<ID> (<LBRACK>E()<RBRACK>)?)
+|   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?)
+|   LOOKAHEAD(2) CALLFUNCTION()
+|   (<ID> ( <LBRACK> E() <RBRACK>)?)
 |   <IBASE>
 |   <OBASE>
-|   <SCALE>
 |   <LAST>
 |   (<FUNCS> (<LRBRACK>) E() (<RRBRACK>))
 |   (<FUNCC> (<LRBRACK>) E() (<RRBRACK>))
@@ -352,4 +341,17 @@ void VARLIST():
 { }
 {
     <ID> ((<LBRACK>) (<RBRACK>))? (<COMMA> <ID> ((<LBRACK>) (<RBRACK>))?)*
+}
+
+JAVACODE void lexicalAnalizer()
+{
+  try {
+    Token t = getNextToken();
+    while(t.kind != 0) {
+      System.out.println("\t (" + t.beginLine + ", " + t.beginColumn + "): " + t.image + " - " + tokenImage[t.kind]);
+      t = getNextToken();
+    }
+  } catch (TokenMgrError error) {
+    System.out.println(error.getMessage());
+  }
 }
