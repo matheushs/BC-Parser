@@ -8,9 +8,15 @@ import java.io.*;
 
 public class BCParser {
     public static void main (String args[]) {
-        StringReader programa = new StringReader(args[0]);
-        BCParser parser = new BCParser(programa);
+        //StringReader programa = new StringReader(args[0]);
+        BCParser parser;
 
+        try{
+            parser = new BCParser(new java.io.FileInputStream(args[0]));
+        } catch (Exception E) {
+            System.out.println("deu merda");
+            return;
+        }
         try {
             //parser.lexicalAnalizer();
             parser.bc();
@@ -135,10 +141,16 @@ void SEP():
     (<SEMICOLON> | <LINEBREAK>)+
 }
 
+void VAR():
+{ }
+{
+    <ID> (<LBRACK> E() <RBRACK>)?
+}
+
 void COMMAND():
 { }
 {
-    E() {System.out.println("Found E()");}
+    E() {System.out.println("Entering E");}
 |   COMPOST_COMMAND() {System.out.println("Found COMPOST_COMMAND");}
 |   COMMAND_IF() {System.out.println("Found COMMAND_IF");}
 |   COMMAND_WHILE() {System.out.println("Found COMMAND_WHILE");}
@@ -215,7 +227,7 @@ void COMMAND_STRING():
 void COMMAND_RETURN():
 { }
 {
-    <RETURN> (<LRBRACK> (E())? <RRBRACK> | (E())?)
+    <RETURN> (LOOKAHEAD(2) <LRBRACK> (E())? <RRBRACK> | (E()))?
 }
 
 void COMMANDLIST():
@@ -251,22 +263,20 @@ void E2():
 void E3():
 { }
 {
-    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>) E4())?  {System.out.println("Found E4");}
+    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>)? E4() {System.out.println("SEU BABACA");})? {System.out.println("Found E4");}
 }
 
 void E4():
 { }
 {
-    (
-        <ID> (<LBRACK> E() <RBRACK>)? ((<PLUSPLUS> | <MINUSMINUS>) |
-                                                             ((<ASSIGN>
-                                                            |  <PLUSASSIGN>
-                                                            |  <MINUSASSIGN>
-                                                            |  <MULASSIGN>
-                                                            |  <DIVASSIGN>
-                                                            |  <MODASSIGN>
-                                                            |  <POWASSIGN>) E4()))
-    )
+    LOOKAHEAD(2)(VAR() ((<PLUSPLUS> | <MINUSMINUS>) |
+                                        ((<ASSIGN>
+                                        |  <PLUSASSIGN>
+                                        |  <MINUSASSIGN>
+                                        |  <MULASSIGN>
+                                        |  <DIVASSIGN>
+                                        |  <MODASSIGN>
+                                        |  <POWASSIGN>) E4())))
 |   E5()  {System.out.println("Found E5");}
 }
 
@@ -297,7 +307,7 @@ void E8():
 void E9():
 { }
 {
-    ((<PLUSPLUS> | <MINUSMINUS>) <ID> (<LBRACK> E() <RBRACK>)?) | E10()  {System.out.println("Found E10");}
+    ((<PLUSPLUS> | <MINUSMINUS>) VAR()) | E10()  {System.out.println("Found E10");}
 }
 
 void E10():
@@ -309,7 +319,7 @@ void E10():
 |   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>)) {System.out.println("Found Length");}
 |   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?) {System.out.println("Found Scale");}
 |   LOOKAHEAD(2) CALLFUNCTION() {System.out.println("Found CALLFUNCTION");}
-|   (<ID> (<LBRACK> E() <RBRACK>)?)  {System.out.println("Found ID");}
+|   (VAR())  {System.out.println("Found ID");}
 |   <IBASE> {System.out.println("Found IBASE");}
 |   <OBASE> {System.out.println("Found OBASE");}
 |   <LAST> {System.out.println("Found LAST");}
@@ -330,9 +340,9 @@ void CALLFUNCTION():
 void DEFINEFUNCTION():
 { }
 {
-    <DEFINE> <ID> <LRBRACK> (VARLIST())? <RRBRACK> <LCBRACK>
-    (<AUTO> VARLIST())?
-    COMMANDLIST() <RCBRACK>
+    <DEFINE> <ID> <LRBRACK> (VARLIST())? <RRBRACK>  <LCBRACK>
+    ((<LINEBREAK>)* <AUTO> VARLIST() SEP() | SEP())?
+    COMMANDLIST() {System.out.println("PAO COM BOSTA");}<RCBRACK> 
 }
 
 void VARLIST():
