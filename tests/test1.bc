@@ -1,6 +1,6 @@
 define b()
 {
-	if (2 > 1) 
+	if (2 > 1)
 
-	return 3
+	b = 2
 }
