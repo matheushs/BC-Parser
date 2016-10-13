@@ -120,19 +120,27 @@ TOKEN:
 {
     <#DIGITS: ["0"-"9"]>
 |   <#LETTERS: ["a"-"z"]  | "_">
-|   <#FLOAT: ("-" | "+")? (<DIGITS>)+ "." (<DIGITS>)+>
+|   <#UPPER: ["A"-"Z"]>
+|   <#FLOAT: ("-" | "+")? (<DIGITS>)* "." (<DIGITS>)+>
 |   <#INTEGER: ("-" | "+")? (<DIGITS>)+>
 |   <#LETTERSNUMBERS: <DIGITS> | <LETTERS>>
-|   <#SYMBOLS: " " | <NOT> | "%" | "&" | "'" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | <LESSER> | <ASSIGN> | <GREATER>  | "[" | "]" | "^" | "{" | "|" | "}">
+|   <SYMBOLS: " " | <NOT> | "%" | "&" | "'" | "(" | ")" | "*" | "+" | "," | "-" | "." | "/" | ":" | ";" | <LESSER> | <ASSIGN> | <GREATER>  | "[" | "]" | "^" | "{" | "|" | "}" | "\\n">
 |   <NUMBERS: <INTEGER> | <FLOAT>>
 |   <ID: <LETTERS> (<LETTERSNUMBERS>)*>
-|   <STRING: <QUOTE>(<LETTERSNUMBERS> | <SYMBOLS> | <SEMICOLON> | <LINEBREAK>)*<QUOTE>>
+//|   <WORDS: (~["\""])*>
+|   <WORDS: <QUOTE>(<DIGITS> | <LETTERS> | <UPPER> | <SYMBOLS>)*<QUOTE>>
 }
 
 void bc():
 { }
 {
   (COMMAND() | DEFINEFUNCTION())+ <EOF> {System.out.println("Found BC");}
+}
+
+void STRING():
+{ }
+{
+    <WORDS>
 }
 
 void SEP():
@@ -145,6 +153,7 @@ void VAR():
 { }
 {
     <ID> (<LBRACK> E() <RBRACK>)?
+|   <SCALE>
 }
 
 void COMMAND():
@@ -160,20 +169,27 @@ void COMMAND():
 |   COMMAND_CONTINUE() {System.out.println("Found COMMAND_CONTINUE");}
 |   COMMAND_QUIT() {System.out.println("Found COMMAND_QUIT");}
 |   COMMAND_PRINT() {System.out.println("Found COMMAND_PRINT");}
-|   COMMAND_STRING() {System.out.println("Found COMMAND_STRING");}
 |   COMMAND_RETURN() {System.out.println("Found COMMAND_RETURN");}
+|   COMMAND_STRING()
 }
 
 void COMPOST_COMMAND():
 { }
 {
-    <LCBRACK> COMMANDLIST() <RCBRACK>
+    <LCBRACK> (<LINEBREAK>)* COMMANDLIST() <RCBRACK>
+}
+
+void COMMANDLIST():
+{ }
+{
+    (<LINEBREAK>)* COMMAND() ( SEP() ( COMMAND() )? )*
+    //COMMAND() (SEP() COMMAND() (SEP())?)*
 }
 
 void COMMAND_IF():
 { }
 {
-    <IF> <LRBRACK> E() <RRBRACK> COMMAND() (LOOKAHEAD(2) <ELSE> COMMAND())?
+    <IF> <LRBRACK> E() <RRBRACK> (<LINEBREAK>)? COMMAND() (LOOKAHEAD(2) <ELSE> COMMAND())?
 }
 
 void COMMAND_WHILE():
@@ -215,13 +231,7 @@ void COMMAND_QUIT():
 void COMMAND_PRINT():
 { }
 {
-    <PRINT> EXPRESSIONLIST()
-}
-
-void COMMAND_STRING():
-{ }
-{
-    <STRING>
+    <PRINT> (STRING()| EXPRESSIONLIST())
 }
 
 void COMMAND_RETURN():
@@ -230,10 +240,10 @@ void COMMAND_RETURN():
     <RETURN> (LOOKAHEAD(2) <LRBRACK> (E())? <RRBRACK> | (E()))?
 }
 
-void COMMANDLIST():
+void COMMAND_STRING():
 { }
 {
-    COMMAND() (SEP() COMMAND())*
+    STRING()
 }
 
 void EXPRESSIONLIST():
@@ -263,13 +273,13 @@ void E2():
 void E3():
 { }
 {
-    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>)? E4() {System.out.println("SEU BABACA");})? {System.out.println("Found E4");}
+    E4() ((<EQUAL> | <LESSEREQ> | <GREATEREQ> | <NOTEQ> | <LESSER> | <GREATER>)? E4())? {System.out.println("Found E4");}
 }
 
 void E4():
 { }
 {
-    LOOKAHEAD(2)(VAR() ((<PLUSPLUS> | <MINUSMINUS>) |
+    LOOKAHEAD(2)((VAR()) ((<PLUSPLUS> | <MINUSMINUS>) |
                                         ((<ASSIGN>
                                         |  <PLUSASSIGN>
                                         |  <MINUSASSIGN>
@@ -313,12 +323,12 @@ void E9():
 void E10():
 { }
 {
-    <NUMBERS> {System.out.println("Found NUMBER");}
-|   (<LRBRACK>) E() (<RRBRACK>) {System.out.println("Found (E)");}
-|   (<SQRT> (<LRBRACK>) E() (<RRBRACK>)) {System.out.println("Found Sqrt");}
-|   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>)) {System.out.println("Found Length");}
-|   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?) {System.out.println("Found Scale");}
-|   LOOKAHEAD(2) CALLFUNCTION() {System.out.println("Found CALLFUNCTION");}
+    <NUMBERS>
+|   (<LRBRACK>) E() (<RRBRACK>)
+|   (<SQRT> (<LRBRACK>) E() (<RRBRACK>))
+|   (<LENGTH> (<LRBRACK>) E() (<RRBRACK>))
+|   (<SCALE> (LOOKAHEAD(2) (<LRBRACK>) E() (<RRBRACK>))?)
+|   LOOKAHEAD(2) CALLFUNCTION()
 |   (VAR())  {System.out.println("Found ID");}
 |   <IBASE> {System.out.println("Found IBASE");}
 |   <OBASE> {System.out.println("Found OBASE");}
@@ -340,9 +350,9 @@ void CALLFUNCTION():
 void DEFINEFUNCTION():
 { }
 {
-    <DEFINE> <ID> <LRBRACK> (VARLIST())? <RRBRACK>  <LCBRACK>
-    ((<LINEBREAK>)* <AUTO> VARLIST() SEP() | SEP())?
-    COMMANDLIST() {System.out.println("PAO COM BOSTA");}<RCBRACK> 
+    <DEFINE> <ID> <LRBRACK> (VARLIST())? <RRBRACK> (<LINEBREAK>)? <LCBRACK> (<LINEBREAK>)*
+    (LOOKAHEAD(1) <AUTO> VARLIST() SEP() | SEP())?
+    COMMANDLIST() <RCBRACK> {System.out.println("PAO COM BOSTA");}
 }
 
 void VARLIST():
