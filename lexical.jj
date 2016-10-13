@@ -13,8 +13,8 @@ public class BCParser {
             return;
         }
         try {
-            //parser.lexicalAnalizer();
-            parser.bc();
+            parser.lexicalAnalizer();
+            //parser.bc();
             System.out.println("Programa analisado com sucesso");
         } catch (ParseException p){
             System.out.println("Erro na linha" + p.currentToken.beginLine + ", coluna " + p.currentToken.beginLine);
